@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 
-	_ "github.com/jackc/pgx/v5/stdlib" // регистрируем драйвер pgx для database/sql
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/Timeobi/go-ecommerce/internal/config"
 	"github.com/Timeobi/go-ecommerce/internal/handler"
@@ -26,40 +28,48 @@ func main() {
 	}
 	defer db.Close()
 
-	// Проверяем, что соединение реально рабочее (Open не гарантирует это сам по себе)
 	if err := db.Ping(); err != nil {
 		log.Fatalf("не удалось подключиться к БД: %v", err)
 	}
 	fmt.Println("Подключение к БД установлено успешно")
 
-	// Собираем слои воедино (это называется Dependency Injection —
-	// каждый слой получает свои зависимости через конструктор)
+	// Categories
 	categoryRepo := repository.NewCategoryRepository(db)
 	categoryService := service.NewCategoryService(categoryRepo)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 
-	mux := http.NewServeMux()
+	// Products
+	productRepo := repository.NewProductRepository(db)
+	productService := service.NewProductService(productRepo)
+	productHandler := handler.NewProductHandler(productService)
 
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	r := chi.NewRouter()
+
+	// Встроенные middleware chi — применяются ко ВСЕМ запросам
+	r.Use(middleware.Logger)    // логирует каждый запрос: метод, путь, статус, время выполнения
+	r.Use(middleware.Recoverer) // перехватывает панику в хендлерах, чтобы сервер не падал целиком
+
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "ok")
 	})
 
-	mux.HandleFunc("/categories", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			categoryHandler.GetAllCategories(w, r)
-		case http.MethodPost:
-			categoryHandler.CreateCategory(w, r)
-		default:
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
+	r.Route("/categories", func(r chi.Router) {
+		r.Get("/", categoryHandler.GetAllCategories)
+		r.Post("/", categoryHandler.CreateCategory)
+		r.Get("/{id}", categoryHandler.GetCategoryByID)
 	})
 
-	mux.HandleFunc("/categories/", categoryHandler.GetCategoryByID)
+	r.Route("/products", func(r chi.Router) {
+		r.Get("/", productHandler.GetAllProducts)
+		r.Post("/", productHandler.CreateProduct)
+		r.Get("/{id}", productHandler.GetProductByID)
+		r.Put("/{id}", productHandler.UpdateProduct)
+		r.Delete("/{id}", productHandler.DeleteProduct)
+	})
 
 	fmt.Printf("Сервер запущен на :%s\n", cfg.ServerPort)
-	if err := http.ListenAndServe(":"+cfg.ServerPort, mux); err != nil {
+	if err := http.ListenAndServe(":"+cfg.ServerPort, r); err != nil {
 		log.Fatalf("не удалось запустить сервер: %v", err)
 	}
 }
