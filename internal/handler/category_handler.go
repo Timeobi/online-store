@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -21,14 +22,35 @@ type createCategoryRequest struct {
 	Name string `json:"name"`
 }
 
+// CreateCategory обрабатывает POST /categories
 func (h *CategoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
-	// ... (код из Этапа 3, без изменений)
+	var req createCategoryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "невалидный JSON в теле запроса")
+		return
+	}
+
+	category, err := h.service.CreateCategory(r.Context(), req.Name)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, category)
 }
 
+// GetAllCategories обрабатывает GET /categories
 func (h *CategoryHandler) GetAllCategories(w http.ResponseWriter, r *http.Request) {
-	// ... (код из Этапа 3, без изменений)
+	categories, err := h.service.GetAllCategories(r.Context())
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "не удалось получить список категорий")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, categories)
 }
 
+// GetCategoryByID обрабатывает GET /categories/{id}
 func (h *CategoryHandler) GetCategoryByID(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idStr)
