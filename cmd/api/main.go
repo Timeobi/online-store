@@ -12,6 +12,8 @@ import (
 
 	"github.com/Timeobi/go-ecommerce/internal/config"
 	"github.com/Timeobi/go-ecommerce/internal/handler"
+	authmw "github.com/Timeobi/go-ecommerce/internal/middleware"
+	"github.com/Timeobi/go-ecommerce/internal/model"
 	"github.com/Timeobi/go-ecommerce/internal/repository"
 	"github.com/Timeobi/go-ecommerce/internal/service"
 )
@@ -43,29 +45,50 @@ func main() {
 	productService := service.NewProductService(productRepo)
 	productHandler := handler.NewProductHandler(productService)
 
-	r := chi.NewRouter()
+	// Auth
+	userRepo := repository.NewUserRepository(db)
+	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
+	authHandler := handler.NewAuthHandler(authService)
 
-	// Встроенные middleware chi — применяются ко ВСЕМ запросам
-	r.Use(middleware.Logger)    // логирует каждый запрос: метод, путь, статус, время выполнения
-	r.Use(middleware.Recoverer) // перехватывает панику в хендлерах, чтобы сервер не падал целиком
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "ok")
 	})
 
-	r.Route("/categories", func(r chi.Router) {
-		r.Get("/", categoryHandler.GetAllCategories)
-		r.Post("/", categoryHandler.CreateCategory)
-		r.Get("/{id}", categoryHandler.GetCategoryByID)
+	// Публичные маршруты аутентификации
+	r.Route("/auth", func(r chi.Router) {
+		r.Post("/register", authHandler.Register)
+		r.Post("/login", authHandler.Login)
 	})
 
+	// Категории — чтение публичное, изменение — только для admin
+	r.Route("/categories", func(r chi.Router) {
+		r.Get("/", categoryHandler.GetAllCategories)
+		r.Get("/{id}", categoryHandler.GetCategoryByID)
+
+		r.Group(func(r chi.Router) {
+			r.Use(authmw.Auth(cfg.JWTSecret))
+			r.Use(authmw.RequireRole(model.RoleAdmin))
+			r.Post("/", categoryHandler.CreateCategory)
+		})
+	})
+
+	// Товары — чтение публичное, изменение — только для admin
 	r.Route("/products", func(r chi.Router) {
 		r.Get("/", productHandler.GetAllProducts)
-		r.Post("/", productHandler.CreateProduct)
 		r.Get("/{id}", productHandler.GetProductByID)
-		r.Put("/{id}", productHandler.UpdateProduct)
-		r.Delete("/{id}", productHandler.DeleteProduct)
+
+		r.Group(func(r chi.Router) {
+			r.Use(authmw.Auth(cfg.JWTSecret))
+			r.Use(authmw.RequireRole(model.RoleAdmin))
+			r.Post("/", productHandler.CreateProduct)
+			r.Put("/{id}", productHandler.UpdateProduct)
+			r.Delete("/{id}", productHandler.DeleteProduct)
+		})
 	})
 
 	fmt.Printf("Сервер запущен на :%s\n", cfg.ServerPort)
