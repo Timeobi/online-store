@@ -50,6 +50,16 @@ func main() {
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	authHandler := handler.NewAuthHandler(authService)
 
+	// Cart
+	cartRepo := repository.NewCartRepository(db)
+	cartService := service.NewCartService(cartRepo, productRepo)
+	cartHandler := handler.NewCartHandler(cartService)
+
+	// Orders
+	orderRepo := repository.NewOrderRepository(db)
+	orderService := service.NewOrderService(orderRepo, cartRepo, productRepo)
+	orderHandler := handler.NewOrderHandler(orderService)
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -89,6 +99,23 @@ func main() {
 			r.Put("/{id}", productHandler.UpdateProduct)
 			r.Delete("/{id}", productHandler.DeleteProduct)
 		})
+	})
+
+	// Корзина — доступна ЛЮБОМУ авторизованному пользователю (не только admin)
+	r.Route("/cart", func(r chi.Router) {
+		r.Use(authmw.Auth(cfg.JWTSecret))
+		r.Get("/", cartHandler.GetCart)
+		r.Post("/items", cartHandler.AddItem)
+		r.Put("/items/{productID}", cartHandler.UpdateItemQuantity)
+		r.Delete("/items/{productID}", cartHandler.RemoveItem)
+	})
+
+	// Заказы — тоже доступны любому авторизованному пользователю
+	r.Route("/orders", func(r chi.Router) {
+		r.Use(authmw.Auth(cfg.JWTSecret))
+		r.Post("/", orderHandler.Checkout)
+		r.Get("/", orderHandler.ListMyOrders)
+		r.Get("/{id}", orderHandler.GetOrderByID)
 	})
 
 	fmt.Printf("Сервер запущен на :%s\n", cfg.ServerPort)
