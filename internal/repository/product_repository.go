@@ -189,3 +189,56 @@ func (r *ProductRepository) Delete(ctx context.Context, id int) (bool, error) {
 
 	return rowsAffected > 0, nil
 }
+
+// GetForUpdate возвращает товар по ID и БЛОКИРУЕТ его строку до конца транзакции
+// (используется параметр tx, а не обычный db — блокировка имеет смысл только внутри транзакции).
+// Применяется при оформлении заказа, чтобы не допустить одновременной продажи
+// последних единиц товара двумя разными покупателями.
+func (r *ProductRepository) GetForUpdate(ctx context.Context, tx *sql.Tx, id int) (*model.Product, error) {
+	query := `
+		SELECT id, category_id, name, slug, description, price, stock_quantity, created_at, updated_at
+		FROM products
+		WHERE id = $1
+		FOR UPDATE
+	`
+
+	var p model.Product
+	err := tx.QueryRowContext(ctx, query, id).Scan(
+		&p.ID, &p.CategoryID, &p.Name, &p.Slug, &p.Description,
+		&p.Price, &p.StockQuantity, &p.CreatedAt, &p.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("repository: get product for update: %w", err)
+	}
+
+	return &p, nil
+}
+
+// DecrementStock уменьшает остаток товара на складе.
+// Условие "AND stock_quantity >= $1" в WHERE — это дополнительная защита
+// (defense in depth): даже если блокировка строки почему-то не сработала как ожидалось,
+// сам UPDATE физически не сможет увести остаток в минус — просто не затронет ни одной строки.
+func (r *ProductRepository) DecrementStock(ctx context.Context, tx *sql.Tx, id, quantity int) error {
+	query := `
+		UPDATE products
+		SET stock_quantity = stock_quantity - $1, updated_at = NOW()
+		WHERE id = $2 AND stock_quantity >= $1
+	`
+	result, err := tx.ExecContext(ctx, query, quantity, id)
+	if err != nil {
+		return fmt.Errorf("repository: decrement stock: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("repository: rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("repository: insufficient stock for product %d", id)
+	}
+
+	return nil
+}
