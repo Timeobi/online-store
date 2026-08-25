@@ -1,33 +1,31 @@
-# Binaries
+# Бинарные файлы, собранные Go
+/bin/
+/build/
 *.exe
 *.dll
 *.so
 *.dylib
 
-# Test binary, coverage
-*.test
+# Файлы тестового покрытия
 *.out
-coverage.out
+coverage.html
 
-# Go workspace
-/bin/
-/obj/
+# Переменные окружения — здесь будут храниться пароли от БД и секреты!
+.env
+.env.local
 
-# IDE/editor files
-.vscode/
+# IDE
 .idea/
+.vscode/
 *.swp
-*.swo
-*~
 
-# OS files
+# Системные файлы
 .DS_Store
 Thumbs.db
 
-# Environment files
-.env
-.env.local
-.env.*.local
+# Логи
+*.log
 
-# Local build artifacts
-/tmp/
+# Go workspace файл (если будешь использовать)
+go.work
+go.work.sum
