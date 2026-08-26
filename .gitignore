@@ -13,6 +13,7 @@ coverage.html
 # Переменные окружения — здесь будут храниться пароли от БД и секреты!
 .env
 .env.local
+.env.docker
 
 # IDE
 .idea/
