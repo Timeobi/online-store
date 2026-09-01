@@ -41,6 +41,7 @@ func (h *CategoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request)
 
 // GetAllCategories обрабатывает GET /categories
 func (h *CategoryHandler) GetAllCategories(w http.ResponseWriter, r *http.Request) {
+
 	categories, err := h.service.GetAllCategories(r.Context())
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "не удалось получить список категорий")
