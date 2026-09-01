@@ -16,7 +16,9 @@ type Config struct {
 	DBName     string
 	DBSSLMode  string
 	ServerPort string
-	JWTSecret  string // добавили
+	JWTSecret  string
+	LogLevel   string
+	LogFormat  string
 }
 
 // Load читает .env файл (если есть) и переменные окружения,
@@ -36,7 +38,9 @@ func Load() (*Config, error) {
 		DBName:     getEnv("DB_NAME", "ecommerce_dev"),
 		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
 		ServerPort: getEnv("SERVER_PORT", "8080"),
-		JWTSecret:  getEnv("JWT_SECRET", ""), // добавили
+		JWTSecret:  getEnv("JWT_SECRET", ""),
+		LogLevel:   getEnv("LOG_LEVEL", "info"),
+		LogFormat:  getEnv("LOG_FORMAT", "text"),
 	}
 
 	return cfg, nil
