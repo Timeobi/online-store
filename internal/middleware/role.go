@@ -20,7 +20,9 @@ func RequireRole(role model.Role) func(http.Handler) http.Handler {
 			if userRole != role {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusForbidden)
-				w.Write([]byte(`{"error": "недостаточно прав для выполнения операции"}`))
+				if _, err := w.Write([]byte(`{"error": "недостаточно прав для выполнения операции"}`)); err != nil {
+					_ = err
+				}
 				return
 			}
 
