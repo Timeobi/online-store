@@ -46,9 +46,9 @@ jobs:
         run: go vet ./...
 
       - name: Запустить golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: v1.64.0
+          version: latest
 
       - name: Проверить уязвимости зависимостей (govulncheck)
         run: |
