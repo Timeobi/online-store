@@ -20,6 +20,7 @@ import (
 )
 
 func main() {
+
 	cfg, err := config.Load()
 	if err != nil {
 		panic("не удалось загрузить конфигурацию: " + err.Error())
@@ -123,4 +124,11 @@ func main() {
 		log.Error("сервер остановлен с ошибкой", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+
+	loginLimiter := authmw.NewRateLimiter(1, 5) // 1 запрос/сек в среднем, всплеск до 5
+
+	r.Route("/auth", func(r chi.Router) {
+		r.With(loginLimiter.Limit).Post("/login", authHandler.Login)
+		r.Post("/register", authHandler.Register)
+	})
 }
