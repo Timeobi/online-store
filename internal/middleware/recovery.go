@@ -27,7 +27,9 @@ func Recovery(log *slog.Logger) func(http.Handler) http.Handler {
 
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(`{"error": "внутренняя ошибка сервера"}`))
+					if _, err := w.Write([]byte(`{"error": "внутренняя ошибка сервера"}`)); err != nil {
+						_ = err
+					}
 				}
 			}()
 
