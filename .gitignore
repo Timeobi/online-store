@@ -30,3 +30,8 @@ Thumbs.db
 # Go workspace файл (если будешь использовать)
 go.work
 go.work.sum
+
+# Файлы тестового покрытия
+coverage.out
+coverage
+coverage.html
