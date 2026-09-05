@@ -17,7 +17,9 @@ func SetLogger(l *slog.Logger) {
 func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+	if err := json.NewEncoder(w).Encode(data); err != nil && log != nil {
+		log.Error("failed to encode JSON response", slog.String("error", err.Error()))
+	}
 }
 
 type errorResponse struct {

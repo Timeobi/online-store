@@ -54,5 +54,7 @@ func Auth(jwtSecret string) func(http.Handler) http.Handler {
 func respondUnauthorized(w http.ResponseWriter, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnauthorized)
-	w.Write([]byte(`{"error": "` + message + `"}`))
+	if _, err := w.Write([]byte(`{"error": "` + message + `"}`)); err != nil {
+		_ = err
+	}
 }

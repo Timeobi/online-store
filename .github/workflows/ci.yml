@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Тесты и статический анализ
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ecommerce_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: ecommerce_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Скачать код репозитория
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Установить Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - name: Скачать зависимости
+        run: go mod download
+
+      - name: Проверить сборку проекта
+        run: go build -v ./...
+
+      - name: Запустить go vet
+        run: go vet ./...
+
+      - name: Запустить golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: latest
+
+      - name: Проверить уязвимости зависимостей (govulncheck)
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+      - name: Проверить утечки секретов (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Запустить unit-тесты
+        run: go test -v -race ./...
+
+      - name: Запустить unit-тесты с покрытием
+        run: go test -coverprofile=coverage.out ./...
+
+      - name: Показать сводку по покрытию
+        run: go tool cover -func=coverage.out
+
+      - name: Применить миграции к тестовой БД
+        env:
+          DATABASE_URL: postgres://ecommerce_user:test_password@localhost:5432/ecommerce_test?sslmode=disable
+        run: |
+          go install -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+          migrate -database "$DATABASE_URL" -path migrations up
+
+      - name: Запустить интеграционные тесты
+        env:
+          DATABASE_URL: postgres://ecommerce_user:test_password@localhost:5432/ecommerce_test?sslmode=disable
+        run: go test -tags=integration -v ./...

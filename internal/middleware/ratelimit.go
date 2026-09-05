@@ -52,7 +52,9 @@ func (rl *RateLimiter) Limit(next http.Handler) http.Handler {
 		if !limiter.Allow() {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusTooManyRequests)
-			w.Write([]byte(`{"error": "слишком много попыток, повторите позже"}`))
+			if _, err := w.Write([]byte(`{"error": "слишком много попыток, повторите позже"}`)); err != nil {
+				_ = err
+			}
 			return
 		}
 

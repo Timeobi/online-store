@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
@@ -72,7 +73,9 @@ func main() {
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		if _, err := w.Write([]byte("ok")); err != nil {
+			_ = err
+		}
 	})
 
 	r.Route("/auth", func(r chi.Router) {
@@ -119,8 +122,16 @@ func main() {
 		r.Get("/{id}", orderHandler.GetOrderByID)
 	})
 
+	srv := &http.Server{
+		Addr:         ":" + cfg.ServerPort,
+		Handler:      r,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
 	log.Info("сервер запущен", slog.String("port", cfg.ServerPort))
-	if err := http.ListenAndServe(":"+cfg.ServerPort, r); err != nil {
+	if err := srv.ListenAndServe(); err != nil {
 		log.Error("сервер остановлен с ошибкой", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
