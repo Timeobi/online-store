@@ -1,5 +1,7 @@
 # Go E-commerce
 
+[![CI](https://github.com/Timeobi/online-store/actions/workflows/ci.yml/badge.svg)](https://github.com/Timeobi/online-store/actions/workflows/ci.yml)
+
 PET проект интернет-магазина на Go.
 
 ## Стек
