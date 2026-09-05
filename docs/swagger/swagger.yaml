@@ -1,0 +1,114 @@
+basePath: /
+definitions:
+  handler.createCategoryRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  handler.errorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  model.Category:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      slug:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: Timeobi
+    url: https://github.com/Timeobi
+  description: |-
+    REST API для учебного проекта интернет-магазина на Go.
+    Слоистая архитектура, JWT-аутентификация, транзакционное оформление заказов.
+  title: Go E-commerce API
+  version: "1.0"
+paths:
+  /categories:
+    get:
+      description: Возвращает все категории товаров. Публичный эндпоинт.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Category'
+            type: array
+      summary: Список категорий
+      tags:
+      - categories
+    post:
+      consumes:
+      - application/json
+      description: Создаёт новую категорию товаров. Требует роль admin.
+      parameters:
+      - description: Данные категории
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handler.createCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Category'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Создать категорию
+      tags:
+      - categories
+  /categories/{id}:
+    get:
+      description: Возвращает одну категорию. Публичный эндпоинт.
+      parameters:
+      - description: ID категории
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Category'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      summary: Получить категорию по ID
+      tags:
+      - categories
+securityDefinitions:
+  BearerAuth:
+    description: 'Введите токен в формате: Bearer {ваш JWT токен}'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

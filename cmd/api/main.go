@@ -7,9 +7,11 @@ import (
 	"os"
 	"time"
 
+	_ "github.com/Timeobi/go-ecommerce/docs/swagger"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	httpSwagger "github.com/swaggo/http-swagger"
 
 	"github.com/Timeobi/go-ecommerce/internal/config"
 	"github.com/Timeobi/go-ecommerce/internal/handler"
@@ -19,6 +21,22 @@ import (
 	"github.com/Timeobi/go-ecommerce/internal/repository"
 	"github.com/Timeobi/go-ecommerce/internal/service"
 )
+
+// @title           Go E-commerce API
+// @version         1.0
+// @description     REST API для учебного проекта интернет-магазина на Go.
+// @description     Слоистая архитектура, JWT-аутентификация, транзакционное оформление заказов.
+
+// @contact.name    Timeobi
+// @contact.url     https://github.com/Timeobi
+
+// @host            localhost:8080
+// @BasePath        /
+
+// @securityDefinitions.apikey  BearerAuth
+// @in                          header
+// @name                        Authorization
+// @description                Введите токен в формате: Bearer {ваш JWT токен}
 
 func main() {
 
@@ -78,6 +96,8 @@ func main() {
 		}
 	})
 
+	r.Get("/swagger/*", httpSwagger.WrapHandler)
+
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", authHandler.Register)
 		r.Post("/login", authHandler.Login)
@@ -136,7 +156,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	loginLimiter := authmw.NewRateLimiter(1, 5) // 1 запрос/сек в среднем, всплеск до 5
+	loginLimiter := authmw.NewRateLimiter(1, 5) // 1 запрос/сек в среднем, всплеск до
 
 	r.Route("/auth", func(r chi.Router) {
 		r.With(loginLimiter.Limit).Post("/login", authHandler.Login)

@@ -23,6 +23,19 @@ type createCategoryRequest struct {
 }
 
 // CreateCategory обрабатывает POST /categories
+//
+// @Summary      Создать категорию
+// @Description  Создаёт новую категорию товаров. Требует роль admin.
+// @Tags         categories
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        input  body      createCategoryRequest  true  "Данные категории"
+// @Success      201    {object}  model.Category
+// @Failure      400    {object}  errorResponse
+// @Failure      401    {object}  errorResponse
+// @Failure      403    {object}  errorResponse
+// @Router       /categories [post]
 func (h *CategoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
 	var req createCategoryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -40,6 +53,13 @@ func (h *CategoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request)
 }
 
 // GetAllCategories обрабатывает GET /categories
+//
+// @Summary      Список категорий
+// @Description  Возвращает все категории товаров. Публичный эндпоинт.
+// @Tags         categories
+// @Produce      json
+// @Success      200  {array}   model.Category
+// @Router       /categories [get]
 func (h *CategoryHandler) GetAllCategories(w http.ResponseWriter, r *http.Request) {
 
 	categories, err := h.service.GetAllCategories(r.Context())
@@ -52,6 +72,15 @@ func (h *CategoryHandler) GetAllCategories(w http.ResponseWriter, r *http.Reques
 }
 
 // GetCategoryByID обрабатывает GET /categories/{id}
+//
+// @Summary      Получить категорию по ID
+// @Description  Возвращает одну категорию. Публичный эндпоинт.
+// @Tags         categories
+// @Produce      json
+// @Param        id   path      int  true  "ID категории"
+// @Success      200  {object}  model.Category
+// @Failure      404  {object}  errorResponse
+// @Router       /categories/{id} [get]
 func (h *CategoryHandler) GetCategoryByID(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idStr)
